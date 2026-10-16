@@ -123,7 +123,7 @@
     if (n.split(/\s+/).length < 2) return error('errInicio', 'Escribí nombre y apellido.');
     $('errInicio').hidden = true;
     ver('vCargando');
-    llamar(CAPA ? { api: 'cuestionario', c: CAPA } : { api: 'cuestionario' })
+    llamar(CAPA ? { api: 'cuestionario', cap: CAPA } : { api: 'cuestionario' })
       .then(q => { quiz = q; idx = 0; resp = {}; render(); })
       .catch(e => { ver('vInicio'); error('errInicio', e.message.includes('fetch') ? 'Sin conexión. Revisá internet y probá de nuevo.' : e.message); });
   });
