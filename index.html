@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cuestionario · PyP Logística</title>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Barlow:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --verde:#0b5d3b; --verde-2:#0e7a4c; --tinta:#16231d; --gris:#5c6b63;
+    --fondo:#eef3f0; --papel:#ffffff; --linea:#d5e0da; --ok:#12884f; --mal:#c2412d;
+    --display:"Barlow Condensed","Arial Narrow",sans-serif; --texto:"Barlow",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--fondo);color:var(--tinta);font-family:var(--texto);font-size:17px;line-height:1.45}
+  header{background:var(--verde);color:#fff;padding:18px 18px 22px}
+  header small{font-family:var(--display);letter-spacing:.12em;text-transform:uppercase;opacity:.8;font-size:.8rem}
+  header h1{font-family:var(--display);font-weight:800;text-transform:uppercase;margin:2px 0 0;font-size:2rem;line-height:1;text-wrap:balance}
+  main{max-width:560px;margin:0 auto;padding:18px 16px 40px}
+  .card{background:var(--papel);border:1px solid var(--linea);border-radius:10px;padding:20px}
+  label{display:block;font-weight:600;margin-bottom:6px}
+  input[type=text]{width:100%;font:inherit;padding:13px 14px;border:1.5px solid var(--linea);border-radius:8px;background:#fff}
+  input[type=text]:focus{outline:none;border-color:var(--verde-2)}
+  .btn{display:block;width:100%;margin-top:16px;padding:15px;border:0;border-radius:8px;background:var(--verde);color:#fff;
+       font-family:var(--display);font-weight:800;font-size:1.25rem;letter-spacing:.04em;text-transform:uppercase;cursor:pointer}
+  .btn:disabled{opacity:.45;cursor:default}
+  .btn:focus-visible,.op:focus-visible{outline:3px solid #f2b705;outline-offset:2px}
+  .nota{color:var(--gris);font-size:.92rem;margin:12px 0 0}
+  .barra{display:flex;gap:6px;margin-bottom:14px}
+  .barra span{flex:1;height:6px;border-radius:3px;background:var(--linea)}
+  .barra span.hecho{background:var(--verde-2)}
+  .num{font-family:var(--display);font-weight:600;color:var(--gris);letter-spacing:.08em;text-transform:uppercase;font-size:.9rem}
+  h2{font-size:1.25rem;line-height:1.3;margin:4px 0 16px;text-wrap:balance}
+  .ops{display:flex;flex-direction:column;gap:10px}
+  .op{text-align:left;font:inherit;padding:14px 14px 14px 46px;border:1.5px solid var(--linea);border-radius:8px;background:#fff;
+      position:relative;cursor:pointer;color:var(--tinta)}
+  .op::before{content:attr(data-l);position:absolute;left:12px;top:12px;width:24px;height:24px;border-radius:50%;
+      border:1.5px solid var(--linea);display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:.95rem;color:var(--gris)}
+  .op.sel{border-color:var(--verde-2);background:#e6f4ec}
+  .op.sel::before{background:var(--verde-2);border-color:var(--verde-2);color:#fff}
+  .nav{display:flex;gap:10px}
+  .nav .btn{flex:1}
+  .btn.sec{background:transparent;color:var(--verde);border:1.5px solid var(--verde)}
+  .resultado{text-align:center}
+  .puntaje{font-family:var(--display);font-weight:800;font-size:5rem;line-height:1;color:var(--verde);margin:8px 0}
+  .puntaje span{font-size:2.2rem;color:var(--gris)}
+  .error{background:#fbe9e5;border:1px solid #efc1b8;color:#8a2a1a;padding:12px 14px;border-radius:8px;margin-top:12px}
+  .cargando{color:var(--gris);text-align:center;padding:30px 0}
+  @media (prefers-reduced-motion:no-preference){ .op{transition:background .12s,border-color .12s} }
+</style>
+</head>
+<body>
+<header>
+  <small>Capacitación · PyP Logística</small>
+  <h1 id="titulo"></h1>
+</header>
+<main>
+  <section id="vInicio" class="card">
+    <label for="nombre">Tu nombre y apellido</label>
+    <input id="nombre" type="text" autocomplete="name" maxlength="60" placeholder="Ej.: Juan Pérez">
+    <button id="bEmpezar" class="btn">Empezar</button>
+    <p class="nota">Cada persona recibe preguntas distintas, en otro orden. Algunas son capciosas: leé bien antes de elegir. Cuenta el tiempo para desempatar.</p>
+    <div id="errInicio" class="error" hidden></div>
+  </section>
+
+  <section id="vPregunta" class="card" hidden>
+    <div class="barra" id="barra"></div>
+    <div class="num" id="numPreg"></div>
+    <h2 id="txtPreg"></h2>
+    <div class="ops" id="ops"></div>
+    <div class="nav">
+      <button id="bAtras" class="btn sec">Atrás</button>
+      <button id="bSig" class="btn" disabled>Siguiente</button>
+    </div>
+    <div id="errPreg" class="error" hidden></div>
+  </section>
+
+  <section id="vFin" class="card resultado" hidden>
+    <div class="num">Tu resultado</div>
+    <div class="puntaje" id="puntaje"></div>
+    <p id="msgFin"></p>
+    <p class="nota">Las respuestas correctas se repasan todos juntos al final.</p>
+  </section>
+
+  <div id="vCargando" class="cargando" hidden>Cargando…</div>
+</main>
+
+<script>
+  // URL de la Web App de Apps Script (el "motor" que corrige y guarda en la planilla)
+  const API = 'https://script.google.com/macros/s/AKfycby4O5Zd4KPdbFJhJm-YLHKO2rHsTvOdStXsAFzR-5fBxI0VsnpWi6CWTTHlgtriv3ZSYQ/exec';
+  let CAPA = new URLSearchParams(location.search).get('c') || '';
+  async function llamar(params, body){
+    const url = API + '?' + new URLSearchParams(params);
+    const r = await fetch(url, body ? { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) } : {});
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || 'Error desconocido');
+    return j.data;
+  }
+  const LETRAS = ['A','B','C','D','E'];
+  let quiz = null, idx = 0, resp = {};
+  const $ = id => document.getElementById(id);
+  $('titulo').textContent = CAPA || 'Cuestionario';
+  if (!CAPA) llamar({ api: 'info' }).then(d => { $('titulo').textContent = d.capa; }).catch(() => {});
+
+  const claveLocal = 'quiz_hecho_' + (CAPA || 'activa') + '_' + new Date().toISOString().slice(0,10);
+  try {
+    const previo = JSON.parse(localStorage.getItem(claveLocal) || 'null');
+    if (previo) mostrarFin(previo);
+  } catch(e) {}
+
+  function ver(id){ ['vInicio','vPregunta','vFin','vCargando'].forEach(v => $(v).hidden = (v !== id)); }
+  function error(el, msg){ $(el).textContent = msg; $(el).hidden = false; }
+
+  $('bEmpezar').addEventListener('click', () => {
+    const n = $('nombre').value.trim();
+    if (n.split(/\s+/).length < 2) return error('errInicio', 'Escribí nombre y apellido.');
+    $('errInicio').hidden = true;
+    ver('vCargando');
+    llamar({ api: 'cuestionario', c: CAPA })
+      .then(q => { quiz = q; idx = 0; resp = {}; render(); })
+      .catch(e => { ver('vInicio'); error('errInicio', e.message.includes('fetch') ? 'Sin conexión. Revisá internet y probá de nuevo.' : e.message); });
+  });
+
+  function render(){
+    ver('vPregunta');
+    const q = quiz.preguntas[idx], total = quiz.preguntas.length;
+    $('barra').innerHTML = '';
+    for (let i = 0; i < total; i++){ const s = document.createElement('span'); if (i <= idx) s.className = 'hecho'; $('barra').appendChild(s); }
+    $('numPreg').textContent = 'Pregunta ' + (idx + 1) + ' de ' + total;
+    $('txtPreg').textContent = q.texto;
+    $('ops').innerHTML = '';
+    q.opciones.forEach((op, i) => {
+      const b = document.createElement('button');
+      b.className = 'op' + (resp[q.id] === op ? ' sel' : '');
+      b.dataset.l = LETRAS[i];
+      b.textContent = op;
+      b.addEventListener('click', () => { resp[q.id] = op; render(); });
+      $('ops').appendChild(b);
+    });
+    $('bAtras').hidden = idx === 0;
+    $('bSig').disabled = !resp[q.id];
+    $('bSig').textContent = idx === total - 1 ? 'Enviar' : 'Siguiente';
+  }
+
+  $('bAtras').addEventListener('click', () => { if (idx > 0) { idx--; render(); } });
+  $('bSig').addEventListener('click', () => {
+    if (idx < quiz.preguntas.length - 1) { idx++; render(); return; }
+    $('bSig').disabled = true; $('bSig').textContent = 'Enviando…';
+    llamar({}, { token: quiz.token, nombre: $('nombre').value, respuestas: resp })
+      .then(r => {
+        try { localStorage.setItem(claveLocal, JSON.stringify(r)); } catch(e) {}
+        mostrarFin(r);
+      })
+      .catch(e => { error('errPreg', e.message); $('bSig').disabled = false; $('bSig').textContent = 'Enviar'; });
+  });
+
+  function mostrarFin(r){
+    ver('vFin');
+    $('puntaje').innerHTML = '';
+    $('puntaje').append(String(r.aciertos));
+    const s = document.createElement('span'); s.textContent = ' / ' + r.total; $('puntaje').appendChild(s);
+    const pct = r.aciertos / r.total;
+    $('msgFin').textContent = (pct === 1 ? '¡Perfecto! ' : pct >= .66 ? '¡Muy bien! ' : 'Hay que repasar. ')
+      + 'Lo respondiste en ' + r.segundos + ' segundos.';
+  }
+</script>
+</body>
+</html>
