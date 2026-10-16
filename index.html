@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cuestionario · PyP Logística</title>
+<title>Cuestionario de capacitación</title>
 <meta charset="utf-8">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Barlow:wght@400;500;600&display=swap">
@@ -52,7 +52,7 @@
 </head>
 <body>
 <header>
-  <small>Capacitación · PyP Logística</small>
+  <small id="empresa">Capacitación</small>
   <h1 id="titulo"></h1>
 </header>
 <main>
@@ -88,8 +88,11 @@
 
 <script>
   // URL de la Web App de Apps Script (el "motor" que corrige y guarda en la planilla)
-  const API = 'https://script.google.com/macros/s/AKfycby4O5Zd4KPdbFJhJm-YLHKO2rHsTvOdStXsAFzR-5fBxI0VsnpWi6CWTTHlgtriv3ZSYQ/exec';
-  let CAPA = new URLSearchParams(location.search).get('c') || '';
+  // Cada planilla tiene su propio motor: el QR trae su ID en ?s=. Sin ?s= se usa el de PyP Logística.
+  const QS = new URLSearchParams(location.search);
+  const ID_MOTOR = /^[A-Za-z0-9_-]{20,}$/.test(QS.get('s') || '') ? QS.get('s') : 'AKfycby4O5Zd4KPdbFJhJm-YLHKO2rHsTvOdStXsAFzR-5fBxI0VsnpWi6CWTTHlgtriv3ZSYQ';
+  const API = 'https://script.google.com/macros/s/' + ID_MOTOR + '/exec';
+  let CAPA = QS.get('c') || '';
   async function llamar(params, body){
     const url = API + '?' + new URLSearchParams(params);
     const r = await fetch(url, body ? { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) } : {});
@@ -101,9 +104,12 @@
   let quiz = null, idx = 0, resp = {};
   const $ = id => document.getElementById(id);
   $('titulo').textContent = CAPA || 'Cuestionario';
-  if (!CAPA) llamar({ api: 'info' }).then(d => { $('titulo').textContent = d.capa; }).catch(() => {});
+  llamar({ api: 'info' }).then(d => {
+    if (!CAPA) $('titulo').textContent = d.capa;
+    if (d.empresa) $('empresa').textContent = 'Capacitación · ' + d.empresa;
+  }).catch(() => {});
 
-  const claveLocal = 'quiz_hecho_' + (CAPA || 'activa') + '_' + new Date().toISOString().slice(0,10);
+  const claveLocal = 'quiz_hecho_' + ID_MOTOR.slice(-8) + '_' + (CAPA || 'activa') + '_' + new Date().toISOString().slice(0,10);
   try {
     const previo = JSON.parse(localStorage.getItem(claveLocal) || 'null');
     if (previo) mostrarFin(previo);
