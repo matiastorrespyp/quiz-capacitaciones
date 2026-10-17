@@ -42,6 +42,8 @@ function doGet(e) {
     const base = urlCuestionario_(cfg, appUrl);
     t.urlJuego = base + (p.cap ? (base.indexOf('?') < 0 ? '?' : '&') + 'c=' + encodeURIComponent(capa) : '');
     t.capacitaciones = JSON.stringify(listarCapacitaciones_());
+    t.urlBase = urlCuestionario_(cfg, appUrl);
+    t.capaPedida = p.cap ? 'SI' : '';
     return t.evaluate()
       .setTitle('Panel · ' + capa)
       .addMetaTag('viewport', 'width=device-width, initial-scale=1');

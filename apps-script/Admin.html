@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Barlow:wght@400;500;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root{
+    --verde:#0b5d3b; --verde-2:#0e7a4c; --tinta:#16231d; --gris:#5c6b63; --fondo:#eef3f0; --papel:#fff;
+    --linea:#d5e0da; --ok:#12884f; --mal:#c2412d; --oro:#c99a06; --plata:#8c9aa3; --bronce:#a8653a;
+    --display:"Barlow Condensed","Arial Narrow",sans-serif; --texto:"Barlow",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--fondo);color:var(--tinta);font-family:var(--texto);font-size:16px;line-height:1.45}
+  header{background:var(--verde);color:#fff;padding:14px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+  header h1{font-family:var(--display);font-weight:800;text-transform:uppercase;margin:0;font-size:1.7rem;line-height:1}
+  header small{font-family:var(--display);letter-spacing:.12em;text-transform:uppercase;opacity:.8}
+  .ctrl{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  select,button{font:inherit;padding:8px 12px;border-radius:6px;border:1px solid var(--linea);background:#fff;color:var(--tinta);cursor:pointer}
+  button.on{background:#f2b705;border-color:#f2b705;font-weight:600}
+  .grid{display:grid;grid-template-columns:minmax(0,320px) minmax(0,1fr);gap:20px;max-width:1200px;margin:0 auto;padding:20px}
+  @media (max-width:820px){.grid{grid-template-columns:minmax(0,1fr)}}
+  .card{background:var(--papel);border:1px solid var(--linea);border-radius:10px;padding:18px;min-width:0}
+  h2{font-family:var(--display);font-weight:800;text-transform:uppercase;letter-spacing:.03em;margin:0 0 12px;font-size:1.35rem}
+  #qr{display:grid;place-items:center;padding:10px;background:#fff}
+  #qr img,#qr canvas{max-width:100%;height:auto}
+  .url{font-size:.8rem;color:var(--gris);word-break:break-all;margin-top:10px}
+  .stats{display:flex;gap:18px;margin-top:14px}
+  .stat b{display:block;font-family:var(--display);font-size:2rem;line-height:1;color:var(--verde)}
+  .stat span{font-size:.8rem;color:var(--gris);text-transform:uppercase;letter-spacing:.06em}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+  th{text-align:left;font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--gris);padding:6px 8px;border-bottom:2px solid var(--linea)}
+  td{padding:9px 8px;border-bottom:1px solid var(--linea)}
+  td.r,th.r{text-align:right}
+  .pos{font-family:var(--display);font-weight:800;font-size:1.3rem;width:44px}
+  tr.p1 .pos{color:var(--oro)} tr.p2 .pos{color:var(--plata)} tr.p3 .pos{color:var(--bronce)}
+  tr.p1 td{background:#fdf6dc}
+  .pts{font-family:var(--display);font-weight:800;font-size:1.2rem}
+  .vacio{color:var(--gris);padding:18px 0}
+  .preg{border-top:1px solid var(--linea);padding:14px 0}
+  .preg:first-of-type{border-top:0}
+  .preg h3{margin:0 0 8px;font-size:1.05rem;text-wrap:balance}
+  .chip{display:inline-block;font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;padding:2px 7px;border-radius:999px;margin-right:6px;vertical-align:2px}
+  .chip.cap{background:#fff3cd;color:#7a5a00}
+  .chip.pct{background:#e6f4ec;color:var(--verde)}
+  .chip.pct.bajo{background:#fbe9e5;color:#8a2a1a}
+  ul.ops{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+  ul.ops li{padding:7px 10px;border-radius:6px;background:#f5f8f6;font-size:.95rem}
+  ul.ops li.ok{background:#dff2e7;font-weight:600;color:#0a4d30}
+  ul.ops li.ok::before{content:"✓ "}
+  .expl{font-size:.88rem;color:var(--gris);margin:8px 0 0}
+  .oculto{filter:blur(7px);user-select:none}
+  .pie{font-size:.8rem;color:var(--gris);margin-top:8px}
+  .tabla{overflow-x:auto}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .tabs{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .tabs button{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.55);border-radius:999px;
+    padding:7px 16px;font-family:var(--display);font-weight:600;font-size:1.05rem;letter-spacing:.04em;text-transform:uppercase}
+  .tabs button:hover{border-color:#fff}
+  .tabs button.on{background:#f2b705;border-color:#f2b705;color:var(--tinta)}
+  .tabs button:focus-visible,.ctrl button:focus-visible{outline:3px solid #f2b705;outline-offset:2px}
+  .cargando{opacity:.45;transition:opacity .15s}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <small>Panel del capacitador</small>
+    <h1 id="titulo"></h1>
+    <nav class="tabs" id="tabs" aria-label="Capacitaciones"></nav>
+  </div>
+  <div class="ctrl">
+    <label for="selFecha" class="sr">Fecha</label>
+    <select id="selFecha"></select>
+    <button id="bResp">Mostrar respuestas</button>
+  </div>
+</header>
+
+<div class="grid">
+  <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
+    <section class="card">
+      <h2>Escaneá para jugar</h2>
+      <div id="qr"></div>
+      <div class="url" id="url"></div>
+      <div class="stats">
+        <div class="stat"><b id="sJug">0</b><span>Jugaron</span></div>
+        <div class="stat"><b id="sProm">–</b><span>Promedio</span></div>
+        <div class="stat"><b id="sPerf">0</b><span>Perfectos</span></div>
+      </div>
+    </section>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
+    <section class="card">
+      <h2>Ranking</h2>
+      <div class="tabla"><table>
+        <thead><tr><th>#</th><th>Participante</th><th class="r">Aciertos</th><th class="r">Tiempo</th><th class="r">Hora</th></tr></thead>
+        <tbody id="ranking"></tbody>
+      </table></div>
+      <div class="pie" id="actualizado"></div>
+    </section>
+
+    <section class="card">
+      <h2>Preguntas y respuestas correctas</h2>
+      <div id="preguntas" class="oculto"></div>
+    </section>
+  </div>
+</div>
+
+<script>
+  const CLAVE = <?= clave ?>;
+  const CAPA_INICIAL = <?= capa ?>;
+  const URL_BASE = <?= urlBase ?>;          // pantalla pública sin capacitación
+  const CAPAS = JSON.parse(<?= capacitaciones ?>);
+  const $ = id => document.getElementById(id);
+  let datos = null, mostrar = false, fechaSel = null, capaActual = null, pedido = 0;
+
+  function urlDe(capa){ return URL_BASE + (URL_BASE.indexOf('?') < 0 ? '?' : '&') + 'c=' + encodeURIComponent(capa); }
+
+  function elegir(capa){
+    if (capa === capaActual) return;
+    capaActual = capa; datos = null;
+    $('titulo').textContent = capa;
+    [...$('tabs').children].forEach(b => { const on = b.dataset.capa === capa; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+    const url = urlDe(capa);
+    $('url').textContent = url;
+    $('qr').innerHTML = '';
+    try { new QRCode($('qr'), { text: url, width: 260, height: 260, correctLevel: QRCode.CorrectLevel.M }); }
+    catch(e) { $('qr').textContent = 'No se pudo dibujar el QR. Usá la URL de abajo.'; }
+    document.querySelector('.grid').classList.add('cargando');
+    try { localStorage.setItem('quiz_panel_capa', capa); } catch(e) {}
+    cargar();
+  }
+
+  (CAPAS.length ? CAPAS : [CAPA_INICIAL]).forEach(c => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = c; b.dataset.capa = c;
+    b.addEventListener('click', () => elegir(c));
+    $('tabs').appendChild(b);
+  });
+  if (CAPAS.length < 2) $('tabs').hidden = true;
+
+  $('bResp').addEventListener('click', () => {
+    mostrar = !mostrar;
+    $('preguntas').classList.toggle('oculto', !mostrar);
+    $('bResp').classList.toggle('on', mostrar);
+    $('bResp').textContent = mostrar ? 'Ocultar respuestas' : 'Mostrar respuestas';
+  });
+  $('selFecha').addEventListener('change', e => { fechaSel = e.target.value; if (datos) pintar(); });
+
+  function cargar(){
+    const n = ++pedido, capa = capaActual;
+    google.script.run
+      .withSuccessHandler(d => {
+        if (n !== pedido || capa !== capaActual) return;   // respuesta vieja de otra capacitación
+        datos = d; if (!fechaSel) fechaSel = d.hoy;
+        document.querySelector('.grid').classList.remove('cargando');
+        pintar();
+      })
+      .withFailureHandler(e => { $('actualizado').textContent = 'Error: ' + e.message; })
+      .datosPanel(CLAVE, capa);
+  }
+
+  function fmtSeg(s){ const m = Math.floor(s / 60); return (m ? m + 'm ' : '') + (s % 60) + 's'; }
+
+  function pintar(){
+    // Fechas disponibles
+    const fechas = Array.from(new Set([datos.hoy].concat(datos.resultados.map(r => r.fecha)))).sort().reverse();
+    const sel = $('selFecha'); sel.innerHTML = '';
+    fechas.concat(['todas']).forEach(f => {
+      const o = document.createElement('option'); o.value = f;
+      o.textContent = f === 'todas' ? 'Todas las fechas' : (f === datos.hoy ? 'Hoy' : f.split('-').reverse().join('/'));
+      if (f === fechaSel) o.selected = true; sel.appendChild(o);
+    });
+
+    const filtra = r => fechaSel === 'todas' || r.fecha === fechaSel;
+    const res = datos.resultados.filter(filtra)
+      .sort((a, b) => (b.aciertos / b.total) - (a.aciertos / a.total) || a.segundos - b.segundos);
+
+    // Ranking
+    const tb = $('ranking'); tb.innerHTML = '';
+    if (!res.length) {
+      const tr = document.createElement('tr'); const td = document.createElement('td');
+      td.colSpan = 5; td.className = 'vacio'; td.textContent = 'Todavía nadie respondió. Mostrá el QR para empezar.';
+      tr.appendChild(td); tb.appendChild(tr);
+    }
+    res.forEach((r, i) => {
+      const tr = document.createElement('tr'); if (i < 3) tr.className = 'p' + (i + 1);
+      [[String(i + 1), 'pos'], [r.nombre, ''], [r.aciertos + ' / ' + r.total, 'r pts'], [fmtSeg(r.segundos), 'r'], [r.hora, 'r']]
+        .forEach(([t, c]) => { const td = document.createElement('td'); td.textContent = t; td.className = c; tr.appendChild(td); });
+      tb.appendChild(tr);
+    });
+
+    $('sJug').textContent = res.length;
+    $('sProm').textContent = res.length ? (res.reduce((s, r) => s + r.aciertos / r.total, 0) / res.length * 100).toFixed(0) + '%' : '–';
+    $('sPerf').textContent = res.filter(r => r.aciertos === r.total).length;
+
+    // Preguntas con % de acierto
+    const det = datos.detalle.filter(filtra);
+    const cont = $('preguntas'); cont.innerHTML = '';
+    const stats = {};
+    det.forEach(d => { stats[d.id] = stats[d.id] || { n: 0, ok: 0 }; stats[d.id].n++; if (d.ok) stats[d.id].ok++; });
+    const lista = datos.preguntas.slice().sort((a, b) => {
+      const pa = stats[a.id] ? stats[a.id].ok / stats[a.id].n : 2, pb = stats[b.id] ? stats[b.id].ok / stats[b.id].n : 2;
+      return pa - pb;
+    });
+    lista.forEach(q => {
+      const div = document.createElement('div'); div.className = 'preg';
+      const h = document.createElement('h3');
+      if (q.capciosa) { const c = document.createElement('span'); c.className = 'chip cap'; c.textContent = 'Capciosa'; h.appendChild(c); }
+      if (stats[q.id]) {
+        const p = Math.round(stats[q.id].ok / stats[q.id].n * 100);
+        const c = document.createElement('span'); c.className = 'chip pct' + (p < 50 ? ' bajo' : '');
+        c.textContent = p + '% acertó (' + stats[q.id].n + ')'; h.appendChild(c);
+      }
+      h.append(q.pregunta); div.appendChild(h);
+      const ul = document.createElement('ul'); ul.className = 'ops';
+      const li0 = document.createElement('li'); li0.className = 'ok'; li0.textContent = q.correcta; ul.appendChild(li0);
+      q.incorrectas.forEach(t => { const li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
+      div.appendChild(ul);
+      if (q.explicacion) { const p = document.createElement('p'); p.className = 'expl'; p.textContent = q.explicacion; div.appendChild(p); }
+      cont.appendChild(div);
+    });
+
+    $('actualizado').textContent = 'Se actualiza solo cada 10 segundos · ' + new Date().toLocaleTimeString('es-AR');
+  }
+
+  let inicial = CAPA_INICIAL;
+  if (!<?= capaPedida ?>.length) { try { const g = localStorage.getItem('quiz_panel_capa'); if (g && CAPAS.indexOf(g) >= 0) inicial = g; } catch(e) {} }
+  elegir(inicial);
+  setInterval(cargar, 10000);
+</script>
+</body>
+</html>
