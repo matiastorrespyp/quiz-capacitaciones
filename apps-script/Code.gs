@@ -27,6 +27,10 @@ function doGet(e) {
 
   // API JSON para la pantalla publicada en GitHub Pages
   if (p.api === 'info') return json_({ ok: true, data: { capa: capa, empresa: cfg.empresa || '' } });
+  if (p.api === 'banco') {   // preguntas para otras planillas conectadas (protegido con clave)
+    if (!cfg.claveBanco || String(p.k) !== String(cfg.claveBanco)) return json_({ ok: false, error: 'Clave de preguntas compartidas incorrecta.' });
+    return json_({ ok: true, data: filasLocales_() });
+  }
   if (p.api === 'cuestionario') {
     try { return json_({ ok: true, data: obtenerCuestionario(capa) }); }
     catch (err) { return json_({ ok: false, error: err.message }); }
@@ -85,6 +89,7 @@ function onOpen() {
   SpreadsheetApp.getUi().createMenu('Quiz')
     .addItem('Limpiar resultados', 'limpiarResultados')
     .addItem('Ver links del cuestionario y del panel', 'verLinks')
+    .addItem('Conectar a preguntas compartidas…', 'conectarPreguntas')
     .addSeparator()
     .addItem('Preparar planilla (setup)', 'setup')
     .addToUi();
@@ -121,6 +126,31 @@ function guardarUrlApp_(url) {
   if (!url || !/\/exec$/.test(url)) return;
   const props = PropertiesService.getScriptProperties();
   if (props.getProperty('URL_APP') !== url) props.setProperty('URL_APP', url);
+}
+
+/** Conecta esta planilla a la planilla central: sus capacitaciones aparecen solas en el panel. */
+function conectarPreguntas() {
+  const ui = SpreadsheetApp.getUi();
+  const r = ui.prompt('Conectar a preguntas compartidas',
+    'Pegá el link de preguntas compartidas que te pasaron (empieza con https://script.google.com/macros/s/...).\n' +
+    'Para desconectar, dejalo vacío.', ui.ButtonSet.OK_CANCEL);
+  if (r.getSelectedButton() !== ui.Button.OK) return;
+  const url = r.getResponseText().trim();
+  if (url && !/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec\?/.test(url)) { ui.alert('Ese link no parece correcto. No se cambió nada.'); return; }
+  let capas = [];
+  if (url) {
+    try {
+      const j = JSON.parse(UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true }).getContentText());
+      if (!j.ok) { ui.alert('La planilla central respondió: ' + j.error); return; }
+      const set = {}; j.data.forEach(f => set[f[0]] = 1); capas = Object.keys(set);
+    } catch (err) { ui.alert('No pude leer ese link: ' + err.message); return; }
+  }
+  const sh = SpreadsheetApp.getActive().getSheetByName(HOJA_CFG);
+  const claves = sh.getRange(1, 1, sh.getLastRow(), 1).getValues().map(x => String(x[0]).trim());
+  const i = claves.indexOf('Preguntas compartidas desde');
+  if (i >= 0) sh.getRange(i + 1, 2).setValue(url); else sh.appendRow(['Preguntas compartidas desde', url]);
+  CacheService.getScriptCache().removeAll(['banco_remoto', 'banco_remoto_respaldo']);
+  ui.alert(url ? 'Conectado. Capacitaciones disponibles: ' + capas.join(' · ') + '\n\nAparecen como botones en tu panel.' : 'Desconectado.');
 }
 
 function verLinks() {
@@ -270,15 +300,53 @@ function getConfig_() {
       'Capciosas por persona': 'capciosasPorPersona',
       'Clave del panel': 'clave',
       'URL del cuestionario': 'urlCuestionario',
-      'Nombre de la empresa': 'empresa'
+      'Nombre de la empresa': 'empresa',
+      'Clave para compartir preguntas': 'claveBanco',
+      'Preguntas compartidas desde': 'fuente'
     };
     if (map[k]) cfg[map[k]] = String(r[1]).trim();
   });
   return cfg;
 }
 
-function leerBanco_(capa) {
+/* ---- Preguntas: las de esta planilla + las compartidas desde la planilla central ---- */
+
+function filasLocales_() {
   return valores_(SpreadsheetApp.getActive().getSheetByName(HOJA_PREG))
+    .filter(r => String(r[0]).trim())
+    .map(r => r.slice(0, 10).map(v => v instanceof Date ? v.toISOString() : v));
+}
+
+/** Filas de la planilla central (si esta planilla está conectada). Se guardan 5 min en caché. */
+function filasRemotas_(cfg) {
+  cfg = cfg || getConfig_();
+  if (!cfg.fuente) return [];
+  const cache = CacheService.getScriptCache();
+  const enCache = cache.get('banco_remoto');
+  if (enCache) return JSON.parse(enCache);
+  try {
+    const r = UrlFetchApp.fetch(cfg.fuente, { muteHttpExceptions: true, followRedirects: true });
+    const j = JSON.parse(r.getContentText());
+    if (!j.ok) throw new Error(j.error);
+    const txt = JSON.stringify(j.data);
+    if (txt.length < 95000) { cache.put('banco_remoto', txt, 300); cache.put('banco_remoto_respaldo', txt, 21600); }
+    return j.data;
+  } catch (err) {
+    const resp = cache.get('banco_remoto_respaldo');   // si la central no responde, usa la última copia
+    return resp ? JSON.parse(resp) : [];
+  }
+}
+
+/** Todas las filas: si una capacitación existe en la central, se usa la versión central. */
+function todasLasFilas_() {
+  const remotas = filasRemotas_();
+  const capasRemotas = {};
+  remotas.forEach(r => capasRemotas[String(r[0]).trim()] = 1);
+  return remotas.concat(filasLocales_().filter(r => !capasRemotas[String(r[0]).trim()]));
+}
+
+function leerBanco_(capa) {
+  return todasLasFilas_()
     .filter(r => String(r[0]).trim() === capa && String(r[9]).toUpperCase() !== 'NO' && r[2] && r[3])
     .map(r => ({
       id: String(r[1]),
@@ -292,7 +360,7 @@ function leerBanco_(capa) {
 
 function listarCapacitaciones_() {
   const set = {};
-  valores_(SpreadsheetApp.getActive().getSheetByName(HOJA_PREG)).forEach(r => { if (r[0]) set[String(r[0]).trim()] = 1; });
+  todasLasFilas_().forEach(r => { if (r[0]) set[String(r[0]).trim()] = 1; });
   return Object.keys(set);
 }
 
