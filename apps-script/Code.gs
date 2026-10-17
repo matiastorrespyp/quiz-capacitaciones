@@ -369,7 +369,7 @@ function crearLeeme_(ss) {
     ['QUIZ DE CAPACITACIONES POR QR — cómo ponerlo en marcha (una sola vez, 5 minutos)'],
     [''],
     ['1. Menú Quiz → "Preparar planilla (setup)". Google pide autorización: elegí tu cuenta → Configuración avanzada → Ir a ... (no seguro) → Permitir. Es tu propia copia, por eso aparece ese aviso.'],
-    ['2. Hoja Config: poné el nombre de tu empresa y cambiá la "Clave del panel" por una tuya.'],
+    ['2. Hoja Config, columna B: en "Nombre de la empresa" escribí el de tu distribuidora, y en "Clave del panel" borrá "cambiar" e inventá una clave tuya (protege tu panel con las respuestas). "URL del cuestionario" dejala vacía.'],
     ['3. Menú Extensiones → Apps Script → botón azul Implementar → Nueva implementación → engranaje → "App web".'],
     ['    Ejecutar como: Yo   ·   Quién tiene acceso: Cualquiera   →   Implementar.'],
     ['4. En la ventana que aparece al implementar, tocá "Copiar" (debajo de la URL). Abrí ese link en una ventana de incógnito agregándole al final ?admin=TU_CLAVE  →  ese es tu PANEL: QR para tus vendedores, ranking en vivo y respuestas correctas. Guardalo en favoritos (después también aparece en Quiz → Ver links).'],
